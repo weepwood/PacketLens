@@ -166,7 +166,6 @@ impl CaptureService {
         };
 
         let batch_counters = Arc::clone(&counters);
-        let batch_running = Arc::clone(&self.running);
         let batch_worker = match thread::Builder::new()
             .name("packetlens-batch".to_string())
             .spawn(move || {
@@ -211,12 +210,6 @@ impl CaptureService {
                             statistics,
                         },
                     );
-
-                    if !batch_running.load(Ordering::Relaxed)
-                        && receiver.try_iter().next().is_none()
-                    {
-                        break;
-                    }
                 }
             }) {
             Ok(worker) => worker,
