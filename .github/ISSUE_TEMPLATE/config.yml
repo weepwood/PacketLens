@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 私密安全报告
+    url: https://github.com/weepwood/PacketLens/security/advisories/new
+    about: 请使用 Security Advisory 报告敏感漏洞，不要公开真实抓包数据。
