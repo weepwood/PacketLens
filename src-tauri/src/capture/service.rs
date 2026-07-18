@@ -11,7 +11,10 @@ use std::{
 use tauri::{AppHandle, Emitter};
 
 use crate::{
-    model::{CaptureRequest, CaptureStatistics, CaptureStatus, PacketBatch, PacketSummary},
+    flow::FlowTracker,
+    model::{
+        CaptureRequest, CaptureStatistics, CaptureStatus, FlowSnapshot, PacketBatch, PacketSummary,
+    },
     process::ProcessResolver,
     protocol,
     storage::{self, StoragePacket, StorageRuntime},
@@ -30,6 +33,7 @@ struct Counters {
 pub struct CaptureService {
     running: Arc<AtomicBool>,
     status: Arc<RwLock<CaptureStatus>>,
+    flows: Arc<Mutex<FlowTracker>>,
     workers: Mutex<Vec<JoinHandle<()>>>,
 }
 
@@ -38,6 +42,7 @@ impl Default for CaptureService {
         Self {
             running: Arc::new(AtomicBool::new(false)),
             status: Arc::new(RwLock::new(CaptureStatus::default())),
+            flows: Arc::new(Mutex::new(FlowTracker::default())),
             workers: Mutex::new(Vec::new()),
         }
     }
@@ -49,6 +54,13 @@ impl CaptureService {
             .read()
             .expect("capture status lock poisoned")
             .clone()
+    }
+
+    pub fn flow_snapshot(&self) -> FlowSnapshot {
+        self.flows
+            .lock()
+            .expect("flow tracker lock poisoned")
+            .snapshot()
     }
 
     pub fn start(&self, app: AppHandle, request: CaptureRequest) -> Result<CaptureStatus, String> {
@@ -85,6 +97,11 @@ impl CaptureService {
             }
         };
 
+        self.flows
+            .lock()
+            .expect("flow tracker lock poisoned")
+            .clear();
+
         {
             let mut status = self.status.write().expect("capture status lock poisoned");
             *status = CaptureStatus {
@@ -104,6 +121,7 @@ impl CaptureService {
         let capture_status = Arc::clone(&self.status);
         let capture_counters = Arc::clone(&counters);
         let capture_ids = Arc::clone(&next_id);
+        let capture_flows = Arc::clone(&self.flows);
         let capture_worker = match thread::Builder::new()
             .name("packetlens-capture".to_string())
             .spawn(move || {
@@ -117,6 +135,10 @@ impl CaptureService {
                             let id = capture_ids.fetch_add(1, Ordering::Relaxed);
                             let mut summary = protocol::summarize(id, &packet);
                             resolver.enrich(&mut summary);
+                            capture_flows
+                                .lock()
+                                .expect("flow tracker lock poisoned")
+                                .observe(&summary);
 
                             capture_counters.packets.fetch_add(1, Ordering::Relaxed);
                             capture_counters
@@ -166,10 +188,12 @@ impl CaptureService {
         };
 
         let batch_counters = Arc::clone(&counters);
+        let batch_flows = Arc::clone(&self.flows);
         let batch_worker = match thread::Builder::new()
             .name("packetlens-batch".to_string())
             .spawn(move || {
                 let mut last_sample = Instant::now();
+                let mut last_flow_emit = Instant::now() - Duration::from_secs(1);
                 let mut last_packets = 0u64;
                 let mut last_bytes = 0u64;
 
@@ -178,7 +202,14 @@ impl CaptureService {
                     match receiver.recv_timeout(Duration::from_millis(100)) {
                         Ok(packet) => packets.push(packet),
                         Err(RecvTimeoutError::Timeout) => {}
-                        Err(RecvTimeoutError::Disconnected) => break,
+                        Err(RecvTimeoutError::Disconnected) => {
+                            let snapshot = batch_flows
+                                .lock()
+                                .expect("flow tracker lock poisoned")
+                                .snapshot();
+                            let _ = app.emit("flow-snapshot", snapshot);
+                            break;
+                        }
                     }
                     packets.extend(receiver.try_iter().take(2_048));
 
@@ -210,6 +241,15 @@ impl CaptureService {
                             statistics,
                         },
                     );
+
+                    if last_flow_emit.elapsed() >= Duration::from_millis(500) {
+                        let snapshot = batch_flows
+                            .lock()
+                            .expect("flow tracker lock poisoned")
+                            .snapshot();
+                        let _ = app.emit("flow-snapshot", snapshot);
+                        last_flow_emit = Instant::now();
+                    }
                 }
             }) {
             Ok(worker) => worker,
