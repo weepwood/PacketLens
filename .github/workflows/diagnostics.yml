@@ -1,0 +1,39 @@
+name: Temporary diagnostics
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  frontend-diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm install --silent
+      - name: Capture TypeScript diagnostics
+        id: check
+        continue-on-error: true
+        run: npm run check > diagnostics.txt 2>&1
+      - name: Comment diagnostics
+        if: steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo '### Temporary frontend diagnostics'
+            echo '```text'
+            tail -n 80 diagnostics.txt
+            echo '```'
+          } > comment.md
+          gh pr comment "$PR_NUMBER" --body-file comment.md
+      - name: Preserve failure status
+        if: steps.check.outcome == 'failure'
+        run: exit 1
