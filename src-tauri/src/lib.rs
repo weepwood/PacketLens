@@ -3,6 +3,7 @@ mod commands;
 mod model;
 mod process;
 mod protocol;
+mod storage;
 
 use capture::CaptureService;
 
@@ -19,7 +20,10 @@ pub fn run() {
             commands::list_interfaces,
             commands::get_capture_status,
             commands::start_capture,
-            commands::stop_capture
+            commands::stop_capture,
+            commands::list_capture_sessions,
+            commands::list_session_packets,
+            commands::delete_capture_session
         ])
         .run(tauri::generate_context!())
         .expect("error while running PacketLens");
