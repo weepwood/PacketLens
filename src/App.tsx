@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Square,
 } from "lucide-react";
+import { ConnectionsPanel, ProcessesPanel } from "./components/FlowPanels";
 import { PacketTable } from "./components/PacketTable";
 import { SessionsPanel } from "./components/SessionsPanel";
 import { TrafficChart } from "./components/TrafficChart";
@@ -54,17 +55,20 @@ function App() {
   const store = useCaptureStore();
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    const unlisteners: Array<() => void> = [];
     const initialize = async () => {
       store.setLoading(true);
       try {
-        const [interfaces, status] = await Promise.all([
+        const [interfaces, status, flowSnapshot] = await Promise.all([
           networkApi.listInterfaces(),
           networkApi.getCaptureStatus(),
+          networkApi.getFlowSnapshot(),
         ]);
         store.setInterfaces(interfaces);
         store.setStatus(status);
-        unlisten = await networkApi.onPacketBatch(store.appendBatch);
+        store.setFlowSnapshot(flowSnapshot);
+        unlisteners.push(await networkApi.onPacketBatch(store.appendBatch));
+        unlisteners.push(await networkApi.onFlowSnapshot(store.setFlowSnapshot));
       } catch (error) {
         store.setError(error instanceof Error ? error.message : String(error));
       } finally {
@@ -72,7 +76,7 @@ function App() {
       }
     };
     void initialize();
-    return () => unlisten?.();
+    return () => unlisteners.forEach((unlisten) => unlisten());
   }, []);
 
   const selectedPacket = useMemo(
@@ -92,6 +96,7 @@ function App() {
         snapshotLength: 65_535,
       });
       store.setStatus(status);
+      store.setFlowSnapshot(await networkApi.getFlowSnapshot());
     } catch (error) {
       store.setError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -103,6 +108,7 @@ function App() {
     store.setLoading(true);
     try {
       store.setStatus(await networkApi.stopCapture());
+      store.setFlowSnapshot(await networkApi.getFlowSnapshot());
     } catch (error) {
       store.setError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -285,6 +291,10 @@ function App() {
                     <dd>{store.filter || "无"}</dd>
                   </div>
                   <div>
+                    <dt>Flow</dt>
+                    <dd>{store.trackedFlowCount.toLocaleString()} tracked</dd>
+                  </div>
+                  <div>
                     <dt>本地会话</dt>
                     <dd>{store.status.sessionId ?? "未创建"}</dd>
                   </div>
@@ -322,13 +332,22 @@ function App() {
                     </strong>
                   </div>
                   <code>
-                    {selectedPacket.source}:{selectedPacket.sourcePort ?? "*"} →{" "}
-                    {selectedPacket.destination}:{selectedPacket.destinationPort ?? "*"}
+                    {selectedPacket.direction} · {selectedPacket.source}:
+                    {selectedPacket.sourcePort ?? "*"} → {selectedPacket.destination}:
+                    {selectedPacket.destinationPort ?? "*"}
                   </code>
                 </div>
               ) : null}
             </section>
           </>
+        ) : page === "connections" ? (
+          <ConnectionsPanel
+            flows={store.flows}
+            trackedFlowCount={store.trackedFlowCount}
+            capturing={store.status.running}
+          />
+        ) : page === "processes" ? (
+          <ProcessesPanel processes={store.processes} />
         ) : page === "sessions" ? (
           <SessionsPanel />
         ) : (
@@ -337,10 +356,7 @@ function App() {
               <Network size={28} />
             </div>
             <h2>{pageLabel}</h2>
-            <p>
-              该模块已经纳入工程边界，将在后续里程碑接入 Flow、PID、DNS、TLS
-              或持久化数据。
-            </p>
+            <p>该模块将在后续里程碑接入 DNS、TLS 或诊断数据。</p>
           </section>
         )}
       </main>
