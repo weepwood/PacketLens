@@ -344,27 +344,13 @@ mod platform {
 
     fn query_tcp_table(address_family: u32) -> Option<Vec<u32>> {
         query_table(|table, size| unsafe {
-            GetExtendedTcpTable(
-                table,
-                size,
-                0,
-                address_family,
-                TCP_TABLE_OWNER_PID_ALL,
-                0,
-            )
+            GetExtendedTcpTable(table, size, 0, address_family, TCP_TABLE_OWNER_PID_ALL, 0)
         })
     }
 
     fn query_udp_table(address_family: u32) -> Option<Vec<u32>> {
         query_table(|table, size| unsafe {
-            GetExtendedUdpTable(
-                table,
-                size,
-                0,
-                address_family,
-                UDP_TABLE_OWNER_PID,
-                0,
-            )
+            GetExtendedUdpTable(table, size, 0, address_family, UDP_TABLE_OWNER_PID, 0)
         })
     }
 
@@ -387,10 +373,7 @@ mod platform {
         u16::from_be(value as u16)
     }
 
-    fn process_info(
-        pid: u32,
-        name_cache: &mut HashMap<u32, Option<String>>,
-    ) -> ProcessInfo {
+    fn process_info(pid: u32, name_cache: &mut HashMap<u32, Option<String>>) -> ProcessInfo {
         let name = name_cache
             .entry(pid)
             .or_insert_with(|| process_name(pid))

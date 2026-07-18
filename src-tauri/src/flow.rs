@@ -51,22 +51,22 @@ impl FlowTracker {
             return;
         }
 
-        let (local_address, local_port, remote_address, remote_port) = match packet.direction.as_str()
-        {
-            "outbound" => (
-                packet.source.clone(),
-                packet.source_port,
-                packet.destination.clone(),
-                packet.destination_port,
-            ),
-            "inbound" => (
-                packet.destination.clone(),
-                packet.destination_port,
-                packet.source.clone(),
-                packet.source_port,
-            ),
-            _ => canonical_endpoints(packet),
-        };
+        let (local_address, local_port, remote_address, remote_port) =
+            match packet.direction.as_str() {
+                "outbound" => (
+                    packet.source.clone(),
+                    packet.source_port,
+                    packet.destination.clone(),
+                    packet.destination_port,
+                ),
+                "inbound" => (
+                    packet.destination.clone(),
+                    packet.destination_port,
+                    packet.source.clone(),
+                    packet.source_port,
+                ),
+                _ => canonical_endpoints(packet),
+            };
 
         let key = FlowKey {
             protocol: packet.protocol.clone(),
@@ -76,18 +76,21 @@ impl FlowTracker {
             remote_port,
             process_id: packet.process_id,
         };
-        let entry = self.entries.entry(key.clone()).or_insert_with(|| FlowEntry {
-            key,
-            process_name: packet.process_name.clone(),
-            first_seen_micros: packet.timestamp_micros,
-            last_seen_micros: packet.timestamp_micros,
-            upload_packets: 0,
-            download_packets: 0,
-            unknown_packets: 0,
-            upload_bytes: 0,
-            download_bytes: 0,
-            unknown_bytes: 0,
-        });
+        let entry = self
+            .entries
+            .entry(key.clone())
+            .or_insert_with(|| FlowEntry {
+                key,
+                process_name: packet.process_name.clone(),
+                first_seen_micros: packet.timestamp_micros,
+                last_seen_micros: packet.timestamp_micros,
+                upload_packets: 0,
+                download_packets: 0,
+                unknown_packets: 0,
+                upload_bytes: 0,
+                download_bytes: 0,
+                unknown_bytes: 0,
+            });
 
         entry.last_seen_micros = entry.last_seen_micros.max(packet.timestamp_micros);
         if entry.process_name.is_none() && packet.process_name.is_some() {
@@ -152,7 +155,9 @@ impl FlowTracker {
                 process.active_connection_count = process.active_connection_count.saturating_add(1);
             }
             process.upload_packets = process.upload_packets.saturating_add(flow.upload_packets);
-            process.download_packets = process.download_packets.saturating_add(flow.download_packets);
+            process.download_packets = process
+                .download_packets
+                .saturating_add(flow.download_packets);
             process.unknown_packets = process.unknown_packets.saturating_add(flow.unknown_packets);
             process.upload_bytes = process.upload_bytes.saturating_add(flow.upload_bytes);
             process.download_bytes = process.download_bytes.saturating_add(flow.download_bytes);
@@ -190,7 +195,10 @@ impl FlowTracker {
             .map(|(key, entry)| (key.clone(), entry.last_seen_micros))
             .collect::<Vec<_>>();
         oldest.sort_by_key(|(_, last_seen)| *last_seen);
-        let remove_count = self.entries.len().saturating_sub(MAX_TRACKED_FLOWS * 9 / 10);
+        let remove_count = self
+            .entries
+            .len()
+            .saturating_sub(MAX_TRACKED_FLOWS * 9 / 10);
         for (key, _) in oldest.into_iter().take(remove_count) {
             self.entries.remove(&key);
         }
@@ -232,7 +240,10 @@ impl FlowEntry {
 }
 
 fn canonical_endpoints(packet: &PacketSummary) -> (String, Option<u16>, String, Option<u16>) {
-    let source = (packet.source.as_str(), packet.source_port.unwrap_or_default());
+    let source = (
+        packet.source.as_str(),
+        packet.source_port.unwrap_or_default(),
+    );
     let destination = (
         packet.destination.as_str(),
         packet.destination_port.unwrap_or_default(),
