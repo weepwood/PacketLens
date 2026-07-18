@@ -1,6 +1,6 @@
 [package]
 name = "packetlens"
-version = "0.2.0"
+version = "0.3.0"
 description = "Windows-first real-time network inspector"
 authors = ["weepwood"]
 edition = "2021"
