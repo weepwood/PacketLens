@@ -1,7 +1,10 @@
 use tauri::{AppHandle, State};
 
 use crate::{
-    model::{CaptureRequest, CaptureStatus, NetworkInterface},
+    model::{
+        CaptureRequest, CaptureSessionSummary, CaptureStatus, NetworkInterface,
+        StoredPacketSummary,
+    },
     AppState,
 };
 
@@ -27,4 +30,33 @@ pub fn start_capture(
 #[tauri::command]
 pub fn stop_capture(state: State<'_, AppState>) -> CaptureStatus {
     state.capture.stop()
+}
+
+#[tauri::command]
+pub fn list_capture_sessions(
+    app: AppHandle,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<Vec<CaptureSessionSummary>, String> {
+    crate::storage::list_sessions(&app, limit.unwrap_or(100), offset.unwrap_or(0))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn list_session_packets(
+    app: AppHandle,
+    session_id: String,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<Vec<StoredPacketSummary>, String> {
+    crate::storage::list_session_packets(
+        &app,
+        &session_id,
+        limit.unwrap_or(250),
+        offset.unwrap_or(0),
+    )
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn delete_capture_session(app: AppHandle, session_id: String) -> Result<(), String> {
+    crate::storage::delete_session(&app, &session_id)
 }
