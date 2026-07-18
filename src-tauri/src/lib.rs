@@ -1,5 +1,6 @@
 mod capture;
 mod commands;
+mod flow;
 mod model;
 mod process;
 mod protocol;
@@ -19,6 +20,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::list_interfaces,
             commands::get_capture_status,
+            commands::get_flow_snapshot,
             commands::start_capture,
             commands::stop_capture,
             commands::list_capture_sessions,

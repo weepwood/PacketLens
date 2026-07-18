@@ -2,9 +2,12 @@ import { create } from "zustand";
 import type {
   CaptureStatistics,
   CaptureStatus,
+  FlowSnapshot,
+  FlowSummary,
   NetworkInterface,
   PacketBatch,
   PacketSummary,
+  ProcessTrafficSummary,
 } from "../types/network";
 
 const EMPTY_STATISTICS: CaptureStatistics = {
@@ -29,6 +32,9 @@ interface CaptureStore {
   status: CaptureStatus;
   statistics: CaptureStatistics;
   packets: PacketSummary[];
+  flows: FlowSummary[];
+  processes: ProcessTrafficSummary[];
+  trackedFlowCount: number;
   trafficHistory: TrafficPoint[];
   selectedPacketId: number | null;
   loading: boolean;
@@ -40,6 +46,7 @@ interface CaptureStore {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   appendBatch: (batch: PacketBatch) => void;
+  setFlowSnapshot: (snapshot: FlowSnapshot) => void;
   selectPacket: (id: number) => void;
   clearPackets: () => void;
 }
@@ -60,6 +67,9 @@ export const useCaptureStore = create<CaptureStore>((set) => ({
   status: INITIAL_STATUS,
   statistics: EMPTY_STATISTICS,
   packets: [],
+  flows: [],
+  processes: [],
+  trackedFlowCount: 0,
   trafficHistory: [],
   selectedPacketId: null,
   loading: false,
@@ -90,6 +100,12 @@ export const useCaptureStore = create<CaptureStore>((set) => ({
         },
       ].slice(-60);
       return { packets, statistics: batch.statistics, trafficHistory };
+    }),
+  setFlowSnapshot: (snapshot) =>
+    set({
+      flows: snapshot.flows,
+      processes: snapshot.processes,
+      trackedFlowCount: snapshot.trackedFlowCount,
     }),
   selectPacket: (selectedPacketId) => set({ selectedPacketId }),
   clearPackets: () =>

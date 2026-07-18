@@ -20,6 +20,7 @@ export interface PacketSummary {
   sourcePort: number | null;
   destinationPort: number | null;
   protocol: string;
+  direction: "outbound" | "inbound" | "unknown" | string;
   length: number;
   info: string;
   processId: number | null;
@@ -47,6 +48,47 @@ export interface CaptureStatus {
   startedAtUnixMs: number | null;
   npcapAvailable: boolean;
   lastError: string | null;
+}
+
+export interface FlowSummary {
+  id: string;
+  protocol: string;
+  localAddress: string;
+  localPort: number | null;
+  remoteAddress: string;
+  remotePort: number | null;
+  processId: number | null;
+  processName: string | null;
+  firstSeenMicros: number;
+  lastSeenMicros: number;
+  state: "active" | "recent" | string;
+  uploadPackets: number;
+  downloadPackets: number;
+  unknownPackets: number;
+  uploadBytes: number;
+  downloadBytes: number;
+  unknownBytes: number;
+}
+
+export interface ProcessTrafficSummary {
+  processId: number | null;
+  processName: string;
+  connectionCount: number;
+  activeConnectionCount: number;
+  uploadPackets: number;
+  downloadPackets: number;
+  unknownPackets: number;
+  uploadBytes: number;
+  downloadBytes: number;
+  unknownBytes: number;
+  lastSeenMicros: number;
+}
+
+export interface FlowSnapshot {
+  generatedAtMicros: number;
+  trackedFlowCount: number;
+  flows: FlowSummary[];
+  processes: ProcessTrafficSummary[];
 }
 
 export interface CaptureSessionSummary {

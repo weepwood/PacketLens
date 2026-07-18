@@ -28,6 +28,7 @@ pub struct PacketSummary {
     pub source_port: Option<u16>,
     pub destination_port: Option<u16>,
     pub protocol: String,
+    pub direction: String,
     pub length: u32,
     pub info: String,
     pub process_id: Option<u32>,
@@ -74,6 +75,53 @@ impl Default for CaptureStatus {
             last_error: None,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlowSummary {
+    pub id: String,
+    pub protocol: String,
+    pub local_address: String,
+    pub local_port: Option<u16>,
+    pub remote_address: String,
+    pub remote_port: Option<u16>,
+    pub process_id: Option<u32>,
+    pub process_name: Option<String>,
+    pub first_seen_micros: u64,
+    pub last_seen_micros: u64,
+    pub state: String,
+    pub upload_packets: u64,
+    pub download_packets: u64,
+    pub unknown_packets: u64,
+    pub upload_bytes: u64,
+    pub download_bytes: u64,
+    pub unknown_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessTrafficSummary {
+    pub process_id: Option<u32>,
+    pub process_name: String,
+    pub connection_count: u64,
+    pub active_connection_count: u64,
+    pub upload_packets: u64,
+    pub download_packets: u64,
+    pub unknown_packets: u64,
+    pub upload_bytes: u64,
+    pub download_bytes: u64,
+    pub unknown_bytes: u64,
+    pub last_seen_micros: u64,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlowSnapshot {
+    pub generated_at_micros: u64,
+    pub tracked_flow_count: u64,
+    pub flows: Vec<FlowSummary>,
+    pub processes: Vec<ProcessTrafficSummary>,
 }
 
 #[derive(Debug, Clone, Serialize)]

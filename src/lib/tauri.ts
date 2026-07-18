@@ -4,6 +4,7 @@ import type {
   CaptureRequest,
   CaptureSessionSummary,
   CaptureStatus,
+  FlowSnapshot,
   NetworkInterface,
   PacketBatch,
   StoredPacketSummary,
@@ -12,6 +13,7 @@ import type {
 export const networkApi = {
   listInterfaces: () => invoke<NetworkInterface[]>("list_interfaces"),
   getCaptureStatus: () => invoke<CaptureStatus>("get_capture_status"),
+  getFlowSnapshot: () => invoke<FlowSnapshot>("get_flow_snapshot"),
   startCapture: (request: CaptureRequest) =>
     invoke<CaptureStatus>("start_capture", { request }),
   stopCapture: () => invoke<CaptureStatus>("stop_capture"),
@@ -27,4 +29,8 @@ export const networkApi = {
     invoke<void>("delete_capture_session", { sessionId }),
   onPacketBatch: (handler: (batch: PacketBatch) => void): Promise<UnlistenFn> =>
     listen<PacketBatch>("packet-batch", (event) => handler(event.payload)),
+  onFlowSnapshot: (
+    handler: (snapshot: FlowSnapshot) => void,
+  ): Promise<UnlistenFn> =>
+    listen<FlowSnapshot>("flow-snapshot", (event) => handler(event.payload)),
 };
