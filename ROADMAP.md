@@ -14,11 +14,11 @@
 
 ## v0.2 — Flow 与进程视角
 
-- [ ] TCP/UDP Flow Table
-- [ ] IPv6 TCP/UDP PID 映射
+- [x] TCP/UDP Flow Table
+- [x] IPv4/IPv6 TCP/UDP PID 映射
 - [ ] ETW 捕获短连接和进程生命周期
-- [ ] 进程流量统计
-- [ ] 连接页面与进程页面
+- [x] 进程流量统计
+- [x] 连接页面与进程页面
 - [ ] DNS 请求、响应和域名-IP 缓存
 - [ ] TCP RTT、重传和 Reset 分析
 
