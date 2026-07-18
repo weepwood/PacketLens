@@ -49,11 +49,7 @@ impl CaptureService {
             .clone()
     }
 
-    pub fn start(
-        &self,
-        app: AppHandle,
-        request: CaptureRequest,
-    ) -> Result<CaptureStatus, String> {
+    pub fn start(&self, app: AppHandle, request: CaptureRequest) -> Result<CaptureStatus, String> {
         if self.running.swap(true, Ordering::SeqCst) {
             return Err("抓包任务已经在运行".to_string());
         }

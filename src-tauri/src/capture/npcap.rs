@@ -50,26 +50,16 @@ mod windows {
 
     type FindAllDevices = unsafe extern "C" fn(*mut *mut PcapIf, *mut c_char) -> c_int;
     type FreeAllDevices = unsafe extern "C" fn(*mut PcapIf);
-    type OpenLive = unsafe extern "C" fn(
-        *const c_char,
-        c_int,
-        c_int,
-        c_int,
-        *mut c_char,
-    ) -> *mut PcapHandle;
+    type OpenLive =
+        unsafe extern "C" fn(*const c_char, c_int, c_int, c_int, *mut c_char) -> *mut PcapHandle;
     type NextPacket = unsafe extern "C" fn(
         *mut PcapHandle,
         *mut *const PcapPacketHeader,
         *mut *const u8,
     ) -> c_int;
     type CloseCapture = unsafe extern "C" fn(*mut PcapHandle);
-    type CompileFilter = unsafe extern "C" fn(
-        *mut PcapHandle,
-        *mut BpfProgram,
-        *const c_char,
-        c_int,
-        u32,
-    ) -> c_int;
+    type CompileFilter =
+        unsafe extern "C" fn(*mut PcapHandle, *mut BpfProgram, *const c_char, c_int, u32) -> c_int;
     type SetFilter = unsafe extern "C" fn(*mut PcapHandle, *mut BpfProgram) -> c_int;
     type FreeFilter = unsafe extern "C" fn(*mut BpfProgram);
     type GetError = unsafe extern "C" fn(*mut PcapHandle) -> *const c_char;
@@ -182,8 +172,7 @@ mod windows {
         let mut devices: *mut PcapIf = ptr::null_mut();
         let mut error_buffer = [0 as c_char; PCAP_ERRBUF_SIZE];
 
-        let result =
-            unsafe { (api.find_all_devices)(&mut devices, error_buffer.as_mut_ptr()) };
+        let result = unsafe { (api.find_all_devices)(&mut devices, error_buffer.as_mut_ptr()) };
         if result != 0 {
             return Err(error_buffer_to_string(&error_buffer));
         }
@@ -250,21 +239,15 @@ mod windows {
         }
 
         fn apply_filter(&self, filter: &str) -> Result<(), String> {
-            let filter = CString::new(filter)
-                .map_err(|_| "捕获过滤器包含无效的 NUL 字符".to_string())?;
+            let filter =
+                CString::new(filter).map_err(|_| "捕获过滤器包含无效的 NUL 字符".to_string())?;
             let mut program = BpfProgram {
                 length: 0,
                 instructions: ptr::null_mut(),
             };
 
             let compile_result = unsafe {
-                (self.api.compile_filter)(
-                    self.handle,
-                    &mut program,
-                    filter.as_ptr(),
-                    1,
-                    u32::MAX,
-                )
+                (self.api.compile_filter)(self.handle, &mut program, filter.as_ptr(), 1, u32::MAX)
             };
             if compile_result != 0 {
                 return Err(format!(
@@ -287,21 +270,17 @@ mod windows {
         pub fn next_packet(&mut self) -> Result<Option<CapturedPacket>, String> {
             let mut header: *const PcapPacketHeader = ptr::null();
             let mut data: *const u8 = ptr::null();
-            let result =
-                unsafe { (self.api.next_packet)(self.handle, &mut header, &mut data) };
+            let result = unsafe { (self.api.next_packet)(self.handle, &mut header, &mut data) };
 
             match result {
                 1 if !header.is_null() && !data.is_null() => {
                     let header = unsafe { &*header };
-                    let bytes = unsafe {
-                        slice::from_raw_parts(data, header.captured_length as usize)
-                    };
+                    let bytes =
+                        unsafe { slice::from_raw_parts(data, header.captured_length as usize) };
                     let seconds = header.timestamp.tv_sec.max(0) as u64;
                     let micros = header.timestamp.tv_usec.max(0) as u64;
                     Ok(Some(CapturedPacket {
-                        timestamp_micros: seconds
-                            .saturating_mul(1_000_000)
-                            .saturating_add(micros),
+                        timestamp_micros: seconds.saturating_mul(1_000_000).saturating_add(micros),
                         original_length: header.original_length,
                         data: bytes.to_vec(),
                     }))
