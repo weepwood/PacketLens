@@ -21,11 +21,30 @@ jobs:
       - name: Fix directional flow fixture and format
         shell: pwsh
         run: |
-          $path = "src-tauri/src/flow.rs"
-          $content = Get-Content $path -Raw
-          $content = $content -replace 'fn packet\(direction: &str, length: u32\) -> PacketSummary \{\r?\n\s*PacketSummary \{', "fn packet(direction: &str, length: u32) -> PacketSummary {`r`n        let inbound = direction == \"inbound\";`r`n        PacketSummary {"
-          $content = $content -replace 'source: "10\.0\.0\.2"\.to_string\(\),\r?\n\s*destination: "1\.1\.1\.1"\.to_string\(\),\r?\n\s*source_port: Some\(50_000\),\r?\n\s*destination_port: Some\(443\),', 'source: if inbound { "1.1.1.1" } else { "10.0.0.2" }.to_string(),`r`n            destination: if inbound { "10.0.0.2" } else { "1.1.1.1" }.to_string(),`r`n            source_port: Some(if inbound { 443 } else { 50_000 }),`r`n            destination_port: Some(if inbound { 50_000 } else { 443 }),' 
-          Set-Content -Path $path -Value $content -NoNewline
+          @'
+          from pathlib import Path
+
+          path = Path("src-tauri/src/flow.rs")
+          content = path.read_text(encoding="utf-8")
+          content = content.replace(
+              '''    fn packet(direction: &str, length: u32) -> PacketSummary {
+                  PacketSummary {''',
+              '''    fn packet(direction: &str, length: u32) -> PacketSummary {
+                  let inbound = direction == "inbound";
+                  PacketSummary {''',
+          )
+          content = content.replace(
+              '''            source: "10.0.0.2".to_string(),
+                  destination: "1.1.1.1".to_string(),
+                  source_port: Some(50_000),
+                  destination_port: Some(443),''',
+              '''            source: if inbound { "1.1.1.1" } else { "10.0.0.2" }.to_string(),
+                  destination: if inbound { "10.0.0.2" } else { "1.1.1.1" }.to_string(),
+                  source_port: Some(if inbound { 443 } else { 50_000 }),
+                  destination_port: Some(if inbound { 50_000 } else { 443 }),''',
+          )
+          path.write_text(content, encoding="utf-8")
+          '@ | python -
           cargo fmt --manifest-path src-tauri/Cargo.toml
       - name: Commit formatting
         shell: pwsh
