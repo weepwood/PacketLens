@@ -1,0 +1,45 @@
+name: One-time flow rustfmt
+
+on:
+  push:
+    branches: [feat/flow-process-view]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/flow-process-view
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Fix directional flow fixture and format
+        shell: pwsh
+        run: |
+          $path = "src-tauri/src/flow.rs"
+          $content = Get-Content $path -Raw
+          $content = $content.Replace(
+            '    fn packet(direction: &str, length: u32) -> PacketSummary {`n        PacketSummary {',
+            '    fn packet(direction: &str, length: u32) -> PacketSummary {`n        let inbound = direction == "inbound";`n        PacketSummary {'
+          )
+          $content = $content.Replace(
+            '            source: "10.0.0.2".to_string(),`n            destination: "1.1.1.1".to_string(),`n            source_port: Some(50_000),`n            destination_port: Some(443),',
+            '            source: if inbound { "1.1.1.1" } else { "10.0.0.2" }.to_string(),`n            destination: if inbound { "10.0.0.2" } else { "1.1.1.1" }.to_string(),`n            source_port: Some(if inbound { 443 } else { 50_000 }),`n            destination_port: Some(if inbound { 50_000 } else { 443 }),' 
+          )
+          Set-Content -Path $path -Value $content -NoNewline
+          cargo fmt --manifest-path src-tauri/Cargo.toml
+      - name: Commit formatting
+        shell: pwsh
+        run: |
+          if (git status --porcelain) {
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src-tauri
+            git commit -m "style: format flow implementation"
+            git push origin HEAD:feat/flow-process-view
+          }
