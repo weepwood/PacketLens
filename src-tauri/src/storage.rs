@@ -48,7 +48,7 @@ pub fn start(
     let database_path = root.join("packetlens.sqlite3");
     let mut connection = open_database(&database_path)?;
     recover_interrupted_sessions(&connection)?;
-    enforce_disk_quota(&connection, DEFAULT_DISK_QUOTA_BYTES)?;
+    enforce_disk_quota(&mut connection, DEFAULT_DISK_QUOTA_BYTES)?;
 
     let session_id = format!("{started_at_ms}-{}", std::process::id());
     let session_directory = root.join("captures").join(&session_id);
