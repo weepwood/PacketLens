@@ -11,6 +11,7 @@ pub fn summarize(id: u64, packet: &CapturedPacket) -> PacketSummary {
         source_port: None,
         destination_port: None,
         protocol: "RAW".to_string(),
+        direction: "unknown".to_string(),
         length: packet.original_length,
         info: format!("{} captured bytes", packet.data.len()),
         process_id: None,
@@ -118,6 +119,7 @@ mod tests {
         let summary = summarize(1, &packet);
 
         assert_eq!(summary.protocol, "RAW");
+        assert_eq!(summary.direction, "unknown");
         assert_eq!(summary.id, 1);
     }
 }
