@@ -2,7 +2,7 @@ use etherparse::{NetSlice, SlicedPacket, TransportSlice};
 
 use crate::model::{CapturedPacket, PacketSummary};
 
-pub fn summarize(id: u64, packet: CapturedPacket) -> PacketSummary {
+pub fn summarize(id: u64, packet: &CapturedPacket) -> PacketSummary {
     let mut summary = PacketSummary {
         id,
         timestamp_micros: packet.timestamp_micros,
@@ -110,14 +110,12 @@ mod tests {
 
     #[test]
     fn malformed_packet_is_reported_as_raw() {
-        let summary = summarize(
-            1,
-            CapturedPacket {
-                timestamp_micros: 42,
-                original_length: 3,
-                data: vec![1, 2, 3],
-            },
-        );
+        let packet = CapturedPacket {
+            timestamp_micros: 42,
+            original_length: 3,
+            data: vec![1, 2, 3],
+        };
+        let summary = summarize(1, &packet);
 
         assert_eq!(summary.protocol, "RAW");
         assert_eq!(summary.id, 1);

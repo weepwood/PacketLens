@@ -30,6 +30,7 @@ export interface CaptureStatistics {
   capturedPackets: number;
   capturedBytes: number;
   droppedPackets: number;
+  storageDroppedPackets: number;
   packetsPerSecond: number;
   bytesPerSecond: number;
 }
@@ -42,7 +43,29 @@ export interface PacketBatch {
 export interface CaptureStatus {
   running: boolean;
   deviceName: string | null;
+  sessionId: string | null;
   startedAtUnixMs: number | null;
   npcapAvailable: boolean;
   lastError: string | null;
+}
+
+export interface CaptureSessionSummary {
+  id: string;
+  startedAtMs: number;
+  endedAtMs: number | null;
+  deviceName: string;
+  filter: string | null;
+  status: "running" | "completed" | "interrupted" | "error" | string;
+  packetCount: number;
+  byteCount: number;
+  storageDropped: number;
+  segmentCount: number;
+  directoryPath: string;
+  lastError: string | null;
+}
+
+export interface StoredPacketSummary extends PacketSummary {
+  segmentIndex: number;
+  fileOffset: number;
+  capturedLength: number;
 }

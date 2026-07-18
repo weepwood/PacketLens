@@ -19,6 +19,7 @@ import {
   Square,
 } from "lucide-react";
 import { PacketTable } from "./components/PacketTable";
+import { SessionsPanel } from "./components/SessionsPanel";
 import { TrafficChart } from "./components/TrafficChart";
 import { networkApi } from "./lib/tauri";
 import { useCaptureStore } from "./store/capture-store";
@@ -115,14 +116,23 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark"><Radio size={22} /></div>
-          <div><strong>PacketLens</strong><span>Network Inspector</span></div>
+          <div className="brand-mark">
+            <Radio size={22} />
+          </div>
+          <div>
+            <strong>PacketLens</strong>
+            <span>Network Inspector</span>
+          </div>
         </div>
         <nav>
           {navigation.map((item) => {
             const Icon = item.icon;
             return (
-              <button key={item.id} className={page === item.id ? "active" : ""} onClick={() => setPage(item.id)}>
+              <button
+                key={item.id}
+                className={page === item.id ? "active" : ""}
+                onClick={() => setPage(item.id)}
+              >
                 <Icon size={17} />
                 <span>{item.label}</span>
               </button>
@@ -130,74 +140,207 @@ function App() {
           })}
         </nav>
         <div className="sidebar-status">
-          <span className={`status-dot ${store.status.npcapAvailable ? "online" : "offline"}`} />
-          <div><strong>Npcap</strong><span>{store.status.npcapAvailable ? "驱动可用" : "未检测到"}</span></div>
+          <span
+            className={`status-dot ${store.status.npcapAvailable ? "online" : "offline"}`}
+          />
+          <div>
+            <strong>Npcap</strong>
+            <span>{store.status.npcapAvailable ? "驱动可用" : "未检测到"}</span>
+          </div>
         </div>
       </aside>
 
       <main className="workspace">
         <header className="topbar">
-          <div><p>PACKETLENS / {page.toUpperCase()}</p><h1>{pageLabel}</h1></div>
+          <div>
+            <p>PACKETLENS / {page.toUpperCase()}</p>
+            <h1>{pageLabel}</h1>
+          </div>
           <div className="capture-controls">
-            <select value={store.selectedInterface} onChange={(event) => store.setSelectedInterface(event.target.value)} disabled={store.status.running}>
-              {store.interfaces.length === 0 ? <option value="">未发现网络接口</option> : null}
-              {store.interfaces.map((item) => <option key={item.name} value={item.name}>{item.description || item.name}</option>)}
+            <select
+              value={store.selectedInterface}
+              onChange={(event) => store.setSelectedInterface(event.target.value)}
+              disabled={store.status.running}
+            >
+              {store.interfaces.length === 0 ? (
+                <option value="">未发现网络接口</option>
+              ) : null}
+              {store.interfaces.map((item) => (
+                <option key={item.name} value={item.name}>
+                  {item.description || item.name}
+                </option>
+              ))}
             </select>
-            <div className="filter-input"><Search size={15} /><input value={store.filter} onChange={(event) => store.setFilter(event.target.value)} placeholder="BPF: tcp port 443" disabled={store.status.running} /></div>
+            <div className="filter-input">
+              <Search size={15} />
+              <input
+                value={store.filter}
+                onChange={(event) => store.setFilter(event.target.value)}
+                placeholder="BPF: tcp port 443"
+                disabled={store.status.running}
+              />
+            </div>
             {store.status.running ? (
-              <button className="capture-button stop" onClick={stopCapture} disabled={store.loading}><Square size={15} fill="currentColor" />停止</button>
+              <button
+                className="capture-button stop"
+                onClick={stopCapture}
+                disabled={store.loading}
+              >
+                <Square size={15} fill="currentColor" />停止
+              </button>
             ) : (
-              <button className="capture-button" onClick={startCapture} disabled={store.loading || !store.selectedInterface || !store.status.npcapAvailable}><Play size={16} fill="currentColor" />开始捕获</button>
+              <button
+                className="capture-button"
+                onClick={startCapture}
+                disabled={
+                  store.loading ||
+                  !store.selectedInterface ||
+                  !store.status.npcapAvailable
+                }
+              >
+                <Play size={16} fill="currentColor" />开始捕获
+              </button>
             )}
           </div>
         </header>
 
         {store.error || store.status.lastError ? (
-          <div className="error-banner"><CircleAlert size={17} /><span>{store.error || store.status.lastError}</span></div>
+          <div className="error-banner">
+            <CircleAlert size={17} />
+            <span>{store.error || store.status.lastError}</span>
+          </div>
         ) : null}
 
         {page === "dashboard" || page === "packets" ? (
           <>
             <section className="stats-grid">
-              <article><div className="stat-icon"><EthernetPort size={19} /></div><span>实时吞吐量</span><strong>{formatRate(store.statistics.bytesPerSecond)}</strong><small>{formatBytes(store.statistics.capturedBytes)} 累计</small></article>
-              <article><div className="stat-icon"><Activity size={19} /></div><span>数据包速率</span><strong>{store.statistics.packetsPerSecond.toLocaleString()} pps</strong><small>{store.statistics.capturedPackets.toLocaleString()} packets</small></article>
-              <article><div className="stat-icon"><ShieldCheck size={19} /></div><span>捕获状态</span><strong>{store.status.running ? "Capturing" : "Idle"}</strong><small>{store.status.deviceName ?? "等待选择网卡"}</small></article>
-              <article><div className="stat-icon warning"><CircleAlert size={19} /></div><span>队列丢弃</span><strong>{store.statistics.droppedPackets.toLocaleString()}</strong><small>应用层背压计数</small></article>
+              <article>
+                <div className="stat-icon">
+                  <EthernetPort size={19} />
+                </div>
+                <span>实时吞吐量</span>
+                <strong>{formatRate(store.statistics.bytesPerSecond)}</strong>
+                <small>{formatBytes(store.statistics.capturedBytes)} 累计</small>
+              </article>
+              <article>
+                <div className="stat-icon">
+                  <Activity size={19} />
+                </div>
+                <span>数据包速率</span>
+                <strong>{store.statistics.packetsPerSecond.toLocaleString()} pps</strong>
+                <small>{store.statistics.capturedPackets.toLocaleString()} packets</small>
+              </article>
+              <article>
+                <div className="stat-icon">
+                  <ShieldCheck size={19} />
+                </div>
+                <span>捕获状态</span>
+                <strong>{store.status.running ? "Capturing" : "Idle"}</strong>
+                <small>{store.status.sessionId ?? store.status.deviceName ?? "等待选择网卡"}</small>
+              </article>
+              <article>
+                <div className="stat-icon warning">
+                  <CircleAlert size={19} />
+                </div>
+                <span>背压丢弃</span>
+                <strong>
+                  {store.statistics.droppedPackets.toLocaleString()} /{" "}
+                  {store.statistics.storageDroppedPackets.toLocaleString()}
+                </strong>
+                <small>界面队列 / 存储队列</small>
+              </article>
             </section>
 
             <section className="overview-grid">
               <article className="panel chart-panel">
-                <div className="panel-heading"><div><span>LIVE TRAFFIC</span><h2>实时网络吞吐量</h2></div><div className="live-pill"><i />100ms 批量刷新</div></div>
+                <div className="panel-heading">
+                  <div>
+                    <span>LIVE TRAFFIC</span>
+                    <h2>实时网络吞吐量</h2>
+                  </div>
+                  <div className="live-pill">
+                    <i />100ms 批量刷新
+                  </div>
+                </div>
                 <TrafficChart points={store.trafficHistory} />
               </article>
               <article className="panel capture-panel">
-                <div className="panel-heading"><div><span>CAPTURE ENGINE</span><h2>捕获引擎</h2></div></div>
+                <div className="panel-heading">
+                  <div>
+                    <span>CAPTURE ENGINE</span>
+                    <h2>捕获引擎</h2>
+                  </div>
+                </div>
                 <dl>
-                  <div><dt>驱动</dt><dd>Npcap / wpcap.dll</dd></div>
-                  <div><dt>接口</dt><dd>{store.status.deviceName ?? "未启动"}</dd></div>
-                  <div><dt>过滤器</dt><dd>{store.filter || "无"}</dd></div>
-                  <div><dt>快照长度</dt><dd>65,535 bytes</dd></div>
+                  <div>
+                    <dt>驱动</dt>
+                    <dd>Npcap / wpcap.dll</dd>
+                  </div>
+                  <div>
+                    <dt>接口</dt>
+                    <dd>{store.status.deviceName ?? "未启动"}</dd>
+                  </div>
+                  <div>
+                    <dt>过滤器</dt>
+                    <dd>{store.filter || "无"}</dd>
+                  </div>
+                  <div>
+                    <dt>本地会话</dt>
+                    <dd>{store.status.sessionId ?? "未创建"}</dd>
+                  </div>
                 </dl>
-                <button className="secondary-button" onClick={store.clearPackets}><RotateCcw size={15} />清空当前窗口</button>
+                <button className="secondary-button" onClick={store.clearPackets}>
+                  <RotateCcw size={15} />清空当前窗口
+                </button>
               </article>
             </section>
 
             <section className="panel packets-panel">
-              <div className="panel-heading"><div><span>PACKET STREAM</span><h2>实时数据包</h2></div><div className="table-actions"><span>{store.packets.length.toLocaleString()} / 10,000</span><button title="暂停界面刷新（后续实现）"><Pause size={15} /></button></div></div>
-              <PacketTable packets={store.packets} selectedPacketId={store.selectedPacketId} onSelect={store.selectPacket} />
+              <div className="panel-heading">
+                <div>
+                  <span>PACKET STREAM</span>
+                  <h2>实时数据包</h2>
+                </div>
+                <div className="table-actions">
+                  <span>{store.packets.length.toLocaleString()} / 10,000</span>
+                  <button title="暂停界面刷新（后续实现）">
+                    <Pause size={15} />
+                  </button>
+                </div>
+              </div>
+              <PacketTable
+                packets={store.packets}
+                selectedPacketId={store.selectedPacketId}
+                onSelect={store.selectPacket}
+              />
               {selectedPacket ? (
                 <div className="packet-inspector">
-                  <div><span>选中数据包 #{selectedPacket.id}</span><strong>{selectedPacket.protocol} · {selectedPacket.info}</strong></div>
-                  <code>{selectedPacket.source}:{selectedPacket.sourcePort ?? "*"} → {selectedPacket.destination}:{selectedPacket.destinationPort ?? "*"}</code>
+                  <div>
+                    <span>选中数据包 #{selectedPacket.id}</span>
+                    <strong>
+                      {selectedPacket.protocol} · {selectedPacket.info}
+                    </strong>
+                  </div>
+                  <code>
+                    {selectedPacket.source}:{selectedPacket.sourcePort ?? "*"} →{" "}
+                    {selectedPacket.destination}:{selectedPacket.destinationPort ?? "*"}
+                  </code>
                 </div>
               ) : null}
             </section>
           </>
+        ) : page === "sessions" ? (
+          <SessionsPanel />
         ) : (
           <section className="panel module-placeholder">
-            <div className="placeholder-icon"><Network size={28} /></div>
+            <div className="placeholder-icon">
+              <Network size={28} />
+            </div>
             <h2>{pageLabel}</h2>
-            <p>该模块已经纳入工程边界，将在后续里程碑接入 Flow、PID、DNS、TLS 或持久化数据。</p>
+            <p>
+              该模块已经纳入工程边界，将在后续里程碑接入 Flow、PID、DNS、TLS
+              或持久化数据。
+            </p>
           </section>
         )}
       </main>

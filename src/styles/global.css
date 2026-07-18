@@ -94,7 +94,7 @@ button { color: inherit; }
 .packet-row:hover { background: rgba(77,163,255,.045); }
 .packet-row.selected { background: rgba(55,214,181,.085); color: #dce8f7; box-shadow: inset 2px 0 var(--accent); }
 .packet-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.protocol { display: inline-flex; padding: 3px 6px; border-radius: 4px; color: #90d6ff; background: rgba(77,163,255,.09); font-size: 9px; }
+.protocol { display: inline-flex; padding: 3px 6px; border-radius: 4px; color: #90d6ff; background: rgba(77,163,255,.09); font-size: 9px; font-style: normal; }
 .protocol-tcp { color: #6fd7ff; }
 .protocol-udp { color: #c3a8ff; background: rgba(170,132,255,.1); }
 .protocol-icmp, .protocol-icmpv6 { color: #ffc879; background: rgba(255,194,100,.1); }
@@ -109,10 +109,58 @@ button { color: inherit; }
 .module-placeholder h2 { margin: 16px 0 8px; }
 .module-placeholder p { max-width: 480px; margin: 0; color: var(--muted); line-height: 1.7; }
 
+.icon-button { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid var(--border); border-radius: 7px; background: rgba(255,255,255,.025); color: #7890aa; cursor: pointer; }
+.icon-button:hover:not(:disabled) { color: var(--text); background: rgba(255,255,255,.055); }
+.icon-button:disabled { opacity: .38; cursor: not-allowed; }
+.danger-button:hover:not(:disabled) { border-color: rgba(255,104,119,.3); color: #ff8f9a; background: rgba(255,104,119,.08); }
+.sessions-layout { display: grid; grid-template-columns: minmax(270px, .72fr) minmax(0, 2fr); gap: 12px; min-height: 610px; }
+.sessions-list-panel, .session-detail-panel { min-height: 610px; overflow: hidden; }
+.sessions-list-panel { display: flex; flex-direction: column; }
+.session-list { display: grid; gap: 7px; padding: 0 10px 12px; overflow: auto; }
+.session-card { width: 100%; padding: 12px; border: 1px solid rgba(143,170,199,.1); border-radius: 9px; background: rgba(5,14,24,.35); color: #9fb2c5; text-align: left; cursor: pointer; }
+.session-card:hover { border-color: rgba(77,163,255,.22); background: rgba(77,163,255,.035); }
+.session-card.selected { border-color: rgba(55,214,181,.28); background: rgba(55,214,181,.07); box-shadow: inset 2px 0 var(--accent); }
+.session-card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.session-card-header time { color: #607991; font-size: 9px; }
+.session-state { padding: 3px 6px; border-radius: 999px; color: #8fa7bf; background: rgba(143,170,199,.08); font-size: 8px; text-transform: uppercase; letter-spacing: .5px; }
+.state-running { color: #65e6c9; background: rgba(55,214,181,.1); }
+.state-completed { color: #8ec5ff; background: rgba(77,163,255,.1); }
+.state-error, .state-interrupted { color: #ff9ca6; background: rgba(255,104,119,.1); }
+.session-card > strong { display: block; margin: 9px 0 4px; overflow: hidden; color: #d3e0ed; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.session-card > small { display: block; overflow: hidden; color: #637d97; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.session-metrics { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 10px; color: #7890aa; font-size: 9px; }
+.session-empty { display: flex; min-height: 160px; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #536c86; font-size: 11px; }
+.detail-empty { min-height: 610px; }
+.sessions-error { margin: 0 10px 10px; padding: 9px; border: 1px solid rgba(255,104,119,.22); border-radius: 7px; background: rgba(255,104,119,.07); color: #ffadb5; font-size: 10px; }
+.session-detail-panel { display: flex; flex-direction: column; }
+.session-detail-heading h2 { max-width: 560px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 0 15px 12px; }
+.session-summary-grid > div { padding: 11px; border: 1px solid rgba(143,170,199,.09); border-radius: 8px; background: rgba(5,14,24,.3); }
+.session-summary-grid svg { color: var(--accent); }
+.session-summary-grid span, .session-summary-grid strong { display: block; }
+.session-summary-grid span { margin: 8px 0 3px; color: #68819b; font-size: 9px; }
+.session-summary-grid strong { font-size: 13px; }
+.session-metadata { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1px; margin: 0 15px 12px; overflow: hidden; border: 1px solid rgba(143,170,199,.09); border-radius: 8px; background: rgba(143,170,199,.09); }
+.session-metadata > div { min-width: 0; padding: 9px 11px; background: #0a1726; }
+.session-metadata dt { color: #627b94; font-size: 9px; }
+.session-metadata dd { margin: 4px 0 0; overflow: hidden; color: #a9bdd0; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.session-metadata .metadata-error { grid-column: 1 / -1; }
+.session-metadata .metadata-error dd { color: #ff9ca6; }
+.stored-packet-table { min-height: 0; margin: 0 15px; overflow: hidden; border: 1px solid rgba(143,170,199,.1); border-radius: 8px; }
+.stored-packet-grid { display: grid; grid-template-columns: 55px 75px minmax(125px,1fr) minmax(125px,1fr) 65px 105px minmax(170px,1.3fr); align-items: center; gap: 8px; padding: 0 11px; }
+.stored-packet-header { height: 32px; background: rgba(5,14,24,.65); color: #637d97; font-size: 8px; text-transform: uppercase; letter-spacing: .5px; }
+.stored-packet-body { height: 270px; overflow: auto; background: rgba(4,12,21,.28); }
+.stored-packet-row { min-height: 32px; border-bottom: 1px solid rgba(143,170,199,.055); color: #96aabf; font-size: 9px; }
+.stored-packet-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-pagination { display: flex; align-items: center; justify-content: space-between; padding: 11px 15px 14px; color: #607991; font-size: 9px; }
+.session-pagination > div { display: flex; gap: 6px; }
+
 @media (max-width: 1180px) {
   .app-shell { grid-template-columns: 190px minmax(0,1fr); }
   .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .topbar { align-items: flex-start; flex-direction: column; }
   .capture-controls { width: 100%; }
   .capture-controls select, .filter-input { flex: 1; width: auto; }
+  .sessions-layout { grid-template-columns: 250px minmax(0,1fr); }
+  .session-summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }

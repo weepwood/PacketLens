@@ -11,6 +11,7 @@ const EMPTY_STATISTICS: CaptureStatistics = {
   capturedPackets: 0,
   capturedBytes: 0,
   droppedPackets: 0,
+  storageDroppedPackets: 0,
   packetsPerSecond: 0,
   bytesPerSecond: 0,
 };
@@ -46,6 +47,7 @@ interface CaptureStore {
 const INITIAL_STATUS: CaptureStatus = {
   running: false,
   deviceName: null,
+  sessionId: null,
   startedAtUnixMs: null,
   npcapAvailable: false,
   lastError: null,
@@ -66,7 +68,10 @@ export const useCaptureStore = create<CaptureStore>((set) => ({
     set((state) => ({
       interfaces,
       selectedInterface:
-        state.selectedInterface || interfaces.find((item) => !item.loopback)?.name || interfaces[0]?.name || "",
+        state.selectedInterface ||
+        interfaces.find((item) => !item.loopback)?.name ||
+        interfaces[0]?.name ||
+        "",
     })),
   setSelectedInterface: (selectedInterface) => set({ selectedInterface }),
   setFilter: (filter) => set({ filter }),

@@ -14,6 +14,7 @@ use crate::{
     model::{CaptureRequest, CaptureStatistics, CaptureStatus, PacketBatch, PacketSummary},
     process::ProcessResolver,
     protocol,
+    storage::{self, StoragePacket, StorageRuntime},
 };
 
 use super::npcap::CaptureSession;
@@ -23,6 +24,7 @@ struct Counters {
     packets: AtomicU64,
     bytes: AtomicU64,
     dropped: AtomicU64,
+    storage_dropped: Arc<AtomicU64>,
 }
 
 pub struct CaptureService {
@@ -64,11 +66,31 @@ impl CaptureService {
         };
 
         let started_at_unix_ms = unix_time_ms();
+        let counters = Arc::new(Counters::default());
+        let StorageRuntime {
+            session_id,
+            sender: storage_sender,
+            worker: storage_worker,
+        } = match storage::start(
+            &app,
+            &request,
+            started_at_unix_ms,
+            Arc::clone(&counters.storage_dropped),
+        ) {
+            Ok(runtime) => runtime,
+            Err(error) => {
+                self.running.store(false, Ordering::SeqCst);
+                self.set_error(format!("初始化捕获存储失败：{error}"));
+                return Err(error);
+            }
+        };
+
         {
             let mut status = self.status.write().expect("capture status lock poisoned");
             *status = CaptureStatus {
                 running: true,
                 device_name: Some(request.device_name.clone()),
+                session_id: Some(session_id),
                 started_at_unix_ms: Some(started_at_unix_ms),
                 npcap_available: true,
                 last_error: None,
@@ -76,14 +98,13 @@ impl CaptureService {
         }
 
         let (sender, receiver) = sync_channel::<PacketSummary>(8_192);
-        let counters = Arc::new(Counters::default());
         let next_id = Arc::new(AtomicU64::new(1));
 
         let capture_running = Arc::clone(&self.running);
         let capture_status = Arc::clone(&self.status);
         let capture_counters = Arc::clone(&counters);
         let capture_ids = Arc::clone(&next_id);
-        let capture_worker = thread::Builder::new()
+        let capture_worker = match thread::Builder::new()
             .name("packetlens-capture".to_string())
             .spawn(move || {
                 let mut session = session;
@@ -94,13 +115,25 @@ impl CaptureService {
                         Ok(Some(packet)) => {
                             let original_length = packet.original_length as u64;
                             let id = capture_ids.fetch_add(1, Ordering::Relaxed);
-                            let mut summary = protocol::summarize(id, packet);
+                            let mut summary = protocol::summarize(id, &packet);
                             resolver.enrich(&mut summary);
 
                             capture_counters.packets.fetch_add(1, Ordering::Relaxed);
                             capture_counters
                                 .bytes
                                 .fetch_add(original_length, Ordering::Relaxed);
+
+                            match storage_sender.try_send(StoragePacket {
+                                summary: summary.clone(),
+                                packet,
+                            }) {
+                                Ok(()) => {}
+                                Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => {
+                                    capture_counters
+                                        .storage_dropped
+                                        .fetch_add(1, Ordering::Relaxed);
+                                }
+                            }
 
                             match sender.try_send(summary) {
                                 Ok(()) => {}
@@ -122,14 +155,18 @@ impl CaptureService {
                         }
                     }
                 }
-            })
-            .map_err(|error| {
+            }) {
+            Ok(worker) => worker,
+            Err(error) => {
                 self.running.store(false, Ordering::SeqCst);
-                error.to_string()
-            })?;
+                let _ = storage_worker.join();
+                self.set_error(error.to_string());
+                return Err(error.to_string());
+            }
+        };
 
         let batch_counters = Arc::clone(&counters);
-        let batch_worker = thread::Builder::new()
+        let batch_worker = match thread::Builder::new()
             .name("packetlens-batch".to_string())
             .spawn(move || {
                 let mut last_sample = Instant::now();
@@ -153,6 +190,9 @@ impl CaptureService {
                         captured_packets,
                         captured_bytes,
                         dropped_packets: batch_counters.dropped.load(Ordering::Relaxed),
+                        storage_dropped_packets: batch_counters
+                            .storage_dropped
+                            .load(Ordering::Relaxed),
                         packets_per_second: ((captured_packets - last_packets) as f64 / elapsed)
                             .round() as u64,
                         bytes_per_second: ((captured_bytes - last_bytes) as f64 / elapsed).round()
@@ -171,15 +211,21 @@ impl CaptureService {
                         },
                     );
                 }
-            })
-            .map_err(|error| {
+            }) {
+            Ok(worker) => worker,
+            Err(error) => {
                 self.running.store(false, Ordering::SeqCst);
-                error.to_string()
-            })?;
+                let _ = capture_worker.join();
+                let _ = storage_worker.join();
+                self.set_error(error.to_string());
+                return Err(error.to_string());
+            }
+        };
 
         let mut workers = self.workers.lock().expect("capture workers lock poisoned");
         workers.push(capture_worker);
         workers.push(batch_worker);
+        workers.push(storage_worker);
         Ok(self.status())
     }
 
