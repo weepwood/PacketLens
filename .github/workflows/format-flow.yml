@@ -27,21 +27,20 @@ jobs:
           path = Path("src-tauri/src/flow.rs")
           content = path.read_text(encoding="utf-8")
           content = content.replace(
-              '''    fn packet(direction: &str, length: u32) -> PacketSummary {
-                  PacketSummary {''',
-              '''    fn packet(direction: &str, length: u32) -> PacketSummary {
-                  let inbound = direction == "inbound";
-                  PacketSummary {''',
+              'source: "10.0.0.2".to_string(),',
+              'source: if inbound { "1.1.1.1" } else { "10.0.0.2" }.to_string(),',
           )
           content = content.replace(
-              '''            source: "10.0.0.2".to_string(),
-                  destination: "1.1.1.1".to_string(),
-                  source_port: Some(50_000),
-                  destination_port: Some(443),''',
-              '''            source: if inbound { "1.1.1.1" } else { "10.0.0.2" }.to_string(),
-                  destination: if inbound { "10.0.0.2" } else { "1.1.1.1" }.to_string(),
-                  source_port: Some(if inbound { 443 } else { 50_000 }),
-                  destination_port: Some(if inbound { 50_000 } else { 443 }),''',
+              'destination: "1.1.1.1".to_string(),',
+              'destination: if inbound { "10.0.0.2" } else { "1.1.1.1" }.to_string(),',
+          )
+          content = content.replace(
+              'source_port: Some(50_000),',
+              'source_port: Some(if inbound { 443 } else { 50_000 }),',
+          )
+          content = content.replace(
+              'destination_port: Some(443),',
+              'destination_port: Some(if inbound { 50_000 } else { 443 }),',
           )
           path.write_text(content, encoding="utf-8")
           '@ | python -
@@ -53,6 +52,6 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add src-tauri
-            git commit -m "test(flow): fix bidirectional fixture"
+            git commit -m "test(flow): fix bidirectional fixture endpoints"
             git push origin HEAD:feat/flow-process-view
           }
