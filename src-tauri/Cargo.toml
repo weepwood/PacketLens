@@ -1,0 +1,29 @@
+[package]
+name = "packetlens"
+version = "0.1.0"
+description = "Windows-first real-time network inspector"
+authors = ["weepwood"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/weepwood/PacketLens"
+
+[lib]
+name = "packetlens_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+etherparse = "0.20.3"
+libloading = "0.8"
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2", features = [] }
+thiserror = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
