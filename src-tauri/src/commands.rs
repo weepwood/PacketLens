@@ -2,8 +2,7 @@ use tauri::{AppHandle, State};
 
 use crate::{
     model::{
-        CaptureRequest, CaptureSessionSummary, CaptureStatus, NetworkInterface,
-        StoredPacketSummary,
+        CaptureRequest, CaptureSessionSummary, CaptureStatus, NetworkInterface, StoredPacketSummary,
     },
     AppState,
 };

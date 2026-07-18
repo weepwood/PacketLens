@@ -108,25 +108,22 @@ pub fn list_sessions(
         .map_err(|error| error.to_string())?;
 
     let sessions = statement
-        .query_map(
-            params![limit.clamp(1, 200), offset],
-            |row| {
-                Ok(CaptureSessionSummary {
-                    id: row.get(0)?,
-                    started_at_ms: row.get::<_, i64>(1)? as u64,
-                    ended_at_ms: row.get::<_, Option<i64>>(2)?.map(|value| value as u64),
-                    device_name: row.get(3)?,
-                    filter: row.get(4)?,
-                    status: row.get(5)?,
-                    packet_count: row.get::<_, i64>(6)? as u64,
-                    byte_count: row.get::<_, i64>(7)? as u64,
-                    storage_dropped: row.get::<_, i64>(8)? as u64,
-                    segment_count: row.get::<_, i64>(9)? as u32,
-                    directory_path: row.get(10)?,
-                    last_error: row.get(11)?,
-                })
-            },
-        )
+        .query_map(params![limit.clamp(1, 200), offset], |row| {
+            Ok(CaptureSessionSummary {
+                id: row.get(0)?,
+                started_at_ms: row.get::<_, i64>(1)? as u64,
+                ended_at_ms: row.get::<_, Option<i64>>(2)?.map(|value| value as u64),
+                device_name: row.get(3)?,
+                filter: row.get(4)?,
+                status: row.get(5)?,
+                packet_count: row.get::<_, i64>(6)? as u64,
+                byte_count: row.get::<_, i64>(7)? as u64,
+                storage_dropped: row.get::<_, i64>(8)? as u64,
+                segment_count: row.get::<_, i64>(9)? as u32,
+                directory_path: row.get(10)?,
+                last_error: row.get(11)?,
+            })
+        })
         .map_err(|error| error.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;
@@ -159,29 +156,24 @@ pub fn list_session_packets(
         .map_err(|error| error.to_string())?;
 
     let packets = statement
-        .query_map(
-            params![session_id, limit.clamp(1, 1_000), offset],
-            |row| {
-                Ok(StoredPacketSummary {
-                    id: row.get::<_, i64>(0)? as u64,
-                    timestamp_micros: row.get::<_, i64>(1)? as u64,
-                    segment_index: row.get::<_, i64>(2)? as u32,
-                    file_offset: row.get::<_, i64>(3)? as u64,
-                    captured_length: row.get::<_, i64>(4)? as u32,
-                    length: row.get::<_, i64>(5)? as u32,
-                    protocol: row.get(6)?,
-                    source: row.get(7)?,
-                    destination: row.get(8)?,
-                    source_port: row.get::<_, Option<i64>>(9)?.map(|value| value as u16),
-                    destination_port: row
-                        .get::<_, Option<i64>>(10)?
-                        .map(|value| value as u16),
-                    process_id: row.get::<_, Option<i64>>(11)?.map(|value| value as u32),
-                    process_name: row.get(12)?,
-                    info: row.get(13)?,
-                })
-            },
-        )
+        .query_map(params![session_id, limit.clamp(1, 1_000), offset], |row| {
+            Ok(StoredPacketSummary {
+                id: row.get::<_, i64>(0)? as u64,
+                timestamp_micros: row.get::<_, i64>(1)? as u64,
+                segment_index: row.get::<_, i64>(2)? as u32,
+                file_offset: row.get::<_, i64>(3)? as u64,
+                captured_length: row.get::<_, i64>(4)? as u32,
+                length: row.get::<_, i64>(5)? as u32,
+                protocol: row.get(6)?,
+                source: row.get(7)?,
+                destination: row.get(8)?,
+                source_port: row.get::<_, Option<i64>>(9)?.map(|value| value as u16),
+                destination_port: row.get::<_, Option<i64>>(10)?.map(|value| value as u16),
+                process_id: row.get::<_, Option<i64>>(11)?.map(|value| value as u32),
+                process_name: row.get(12)?,
+                info: row.get(13)?,
+            })
+        })
         .map_err(|error| error.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;
@@ -214,7 +206,10 @@ pub fn delete_session(app: &AppHandle, session_id: &str) -> Result<(), String> {
         fs::remove_dir_all(&directory).map_err(|error| error.to_string())?;
     }
     connection
-        .execute("DELETE FROM capture_sessions WHERE id = ?1", params![session_id])
+        .execute(
+            "DELETE FROM capture_sessions WHERE id = ?1",
+            params![session_id],
+        )
         .map_err(|error| error.to_string())?;
     Ok(())
 }
@@ -316,7 +311,9 @@ impl SessionWriter {
             captured_length: packet.packet.data.len() as u32,
         });
 
-        if self.pending_rows.len() >= INDEX_BATCH_SIZE || self.last_flush.elapsed() >= FLUSH_INTERVAL {
+        if self.pending_rows.len() >= INDEX_BATCH_SIZE
+            || self.last_flush.elapsed() >= FLUSH_INTERVAL
+        {
             self.flush()?;
         }
         Ok(())
@@ -411,7 +408,11 @@ impl SessionWriter {
             .map(str::to_string)
             .or(flush_error)
             .unwrap_or_default();
-        let final_status = if final_error.is_empty() { status } else { "error" };
+        let final_status = if final_error.is_empty() {
+            status
+        } else {
+            "error"
+        };
 
         self.connection
             .execute(
@@ -508,9 +509,7 @@ fn push_u32(output: &mut Vec<u8>, value: u32) {
 }
 
 fn storage_root(app: &AppHandle) -> Result<PathBuf, String> {
-    app.path()
-        .app_data_dir()
-        .map_err(|error| error.to_string())
+    app.path().app_data_dir().map_err(|error| error.to_string())
 }
 
 fn open_database(path: &Path) -> Result<Connection, String> {
@@ -585,7 +584,9 @@ fn enforce_disk_quota(connection: &mut Connection, quota: u64) -> Result<(), Str
         )
         .map_err(|error| error.to_string())?;
     let sessions = statement
-        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
         .map_err(|error| error.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;

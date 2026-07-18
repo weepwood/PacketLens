@@ -128,8 +128,7 @@ impl CaptureService {
                                 packet,
                             }) {
                                 Ok(()) => {}
-                                Err(TrySendError::Full(_))
-                                | Err(TrySendError::Disconnected(_)) => {
+                                Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => {
                                     capture_counters
                                         .storage_dropped
                                         .fetch_add(1, Ordering::Relaxed);
@@ -213,7 +212,8 @@ impl CaptureService {
                         },
                     );
 
-                    if !batch_running.load(Ordering::Relaxed) && receiver.try_iter().next().is_none()
+                    if !batch_running.load(Ordering::Relaxed)
+                        && receiver.try_iter().next().is_none()
                     {
                         break;
                     }
