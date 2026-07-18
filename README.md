@@ -10,7 +10,7 @@ PacketLens 是一款 **Windows 优先**的实时网络观察与数据包分析�
 - DNS、TCP、TLS 请求发生了什么？
 - 哪些连接存在超时、重传或失败？
 
-> 当前版本为可运行的工程骨架与 Windows 抓包 MVP。协议覆盖、进程关联和持久化会按 Roadmap 继续推进。
+> 当前版本为 Windows 抓包与本地持久化 MVP。Flow、完整协议树和应用层诊断会按 Roadmap 继续推进。
 
 ## 技术栈
 
@@ -20,6 +20,7 @@ PacketLens 是一款 **Windows 优先**的实时网络观察与数据包分析�
 - React 19 + TypeScript + Vite
 - Npcap（运行时动态加载 `wpcap.dll`）
 - etherparse
+- rusqlite + SQLite
 - Zustand
 - TanStack Virtual
 - SCSS/CSS Variables（不使用 TailwindCSS）
@@ -34,8 +35,11 @@ PacketLens 是一款 **Windows 优先**的实时网络观察与数据包分析�
 - Ethernet / IPv4 / IPv6 / TCP / UDP / ICMP 基础解析
 - Rust 后端每 100ms 批量推送数据，避免逐包刷新 React
 - 前端虚拟数据包列表，最多保留最近 10,000 条摘要
-- 实时吞吐量、数据包速率和丢包统计
+- 实时吞吐量、数据包速率和界面/存储丢包统计
 - Windows TCP 连接与 PID 映射基础接口
+- 原始数据写入 pcapng，SQLite 保存会话和包索引
+- 捕获历史、分页浏览、会话删除和异常中断标记
+- 512 MiB / 30 分钟文件滚动和 10 GiB 默认磁盘配额
 - CI、依赖更新、安全策略和贡献指南
 
 ## Windows 开发环境
@@ -93,26 +97,40 @@ Npcap / wpcap.dll
         ↓
 WindowsCaptureBackend（独立阻塞线程）
         ↓
-有界同步队列
+有界实时摘要队列 ───────────────→ 100ms 批量 Tauri Event → React
         ↓
-etherparse 基础协议解析
+有界存储队列
         ↓
-PacketSummary / FlowKey
-        ↓
-100ms 批量聚合
-        ↓
-Tauri Event
-        ↓
-React + TanStack Virtual
+pcapng 分段文件 + SQLite 索引
 ```
 
 关键约束：
 
 1. React 不接触原始抓包缓冲区。
 2. 不为每个数据包触发一次 IPC。
-3. 内部队列有上限，过载时显式统计丢包。
-4. 前端只保留有限实时窗口；长期数据后续写入 pcapng + SQLite。
-5. Npcap 使用动态加载，仓库不依赖 Npcap SDK 的 `.lib` 文件。
+3. 实时队列和存储队列均有上限，过载时分别统计丢包。
+4. 前端只保留有限实时窗口；长期数据写入 pcapng + SQLite。
+5. SQLite 只保存索引，不重复保存完整 payload。
+6. Npcap 使用动态加载，仓库不依赖 Npcap SDK 的 `.lib` 文件。
+
+## 本地数据
+
+每次捕获都会创建一个会话目录：
+
+```text
+<app-data>/
+├─ packetlens.sqlite3
+└─ captures/<session-id>/segment-0000.pcapng
+```
+
+“捕获历史”页面可以查看会话、存储路径、包数、字节数、分段和索引数据。pcapng 文件可以使用 Wireshark 打开。
+
+默认策略：
+
+- 每个分段最大 512 MiB 或 30 分钟；
+- 存储索引每 256 条或 500ms 批量提交；
+- 总配额 10 GiB，超限后清理最旧的非运行会话；
+- 异常退出的运行会话在下次捕获时标记为 `interrupted`。
 
 ## 隐私与安全
 
@@ -129,6 +147,7 @@ React + TanStack Virtual
 ## 文档
 
 - [架构说明](docs/ARCHITECTURE.md)
+- [捕获存储](docs/STORAGE.md)
 - [Windows 开发环境](docs/WINDOWS-DEVELOPMENT.md)
 - [路线图](ROADMAP.md)
 - [贡献指南](CONTRIBUTING.md)
