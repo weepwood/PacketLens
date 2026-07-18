@@ -6,16 +6,9 @@ mod protocol;
 
 use capture::CaptureService;
 
+#[derive(Default)]
 pub struct AppState {
     capture: CaptureService,
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            capture: CaptureService::default(),
-        }
-    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
