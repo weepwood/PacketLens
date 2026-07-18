@@ -34,6 +34,70 @@ jobs:
             echo '```'
           } > comment.md
           gh pr comment "$PR_NUMBER" --body-file comment.md
-      - name: Preserve failure status
+      - name: Preserve frontend failure status
         if: steps.check.outcome == 'failure'
+        run: exit 1
+
+  rust-diagnostic:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Produce rustfmt patch
+        shell: pwsh
+        run: |
+          cargo fmt --manifest-path src-tauri/Cargo.toml
+          git diff -- src-tauri | Out-File -FilePath rustfmt.patch -Encoding utf8
+      - name: Comment rustfmt patch
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if ((Get-Item rustfmt.patch).Length -gt 3) {
+            "### Temporary rustfmt diagnostics`n``````diff" | Out-File rustfmt-comment.md -Encoding utf8
+            Get-Content rustfmt.patch | Select-Object -Last 500 | Add-Content rustfmt-comment.md
+            "``````" | Add-Content rustfmt-comment.md
+            gh pr comment $env:PR_NUMBER --body-file rustfmt-comment.md
+          }
+      - name: Capture clippy diagnostics
+        id: clippy
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings *> clippy.txt
+          exit $LASTEXITCODE
+      - name: Comment clippy diagnostics
+        if: steps.clippy.outcome == 'failure'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          "### Temporary Rust clippy diagnostics`n``````text" | Out-File clippy-comment.md -Encoding utf8
+          Get-Content clippy.txt | Select-Object -Last 120 | Add-Content clippy-comment.md
+          "``````" | Add-Content clippy-comment.md
+          gh pr comment $env:PR_NUMBER --body-file clippy-comment.md
+      - name: Capture test diagnostics
+        id: tests
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          cargo test --manifest-path src-tauri/Cargo.toml *> tests.txt
+          exit $LASTEXITCODE
+      - name: Comment test diagnostics
+        if: steps.tests.outcome == 'failure'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          "### Temporary Rust test diagnostics`n``````text" | Out-File tests-comment.md -Encoding utf8
+          Get-Content tests.txt | Select-Object -Last 120 | Add-Content tests-comment.md
+          "``````" | Add-Content tests-comment.md
+          gh pr comment $env:PR_NUMBER --body-file tests-comment.md
+      - name: Preserve Rust failure status
+        if: steps.clippy.outcome == 'failure' || steps.tests.outcome == 'failure'
         run: exit 1
