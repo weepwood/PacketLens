@@ -283,6 +283,7 @@ mod tests {
     use super::*;
 
     fn packet(direction: &str, length: u32) -> PacketSummary {
+        let inbound = direction == "inbound";
         PacketSummary {
             id: 1,
             timestamp_micros: unix_time_micros(),
