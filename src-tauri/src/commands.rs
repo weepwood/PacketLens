@@ -2,7 +2,8 @@ use tauri::{AppHandle, State};
 
 use crate::{
     model::{
-        CaptureRequest, CaptureSessionSummary, CaptureStatus, NetworkInterface, StoredPacketSummary,
+        CaptureRequest, CaptureSessionSummary, CaptureStatus, FlowSnapshot, NetworkInterface,
+        StoredPacketSummary,
     },
     AppState,
 };
@@ -15,6 +16,11 @@ pub fn list_interfaces() -> Result<Vec<NetworkInterface>, String> {
 #[tauri::command]
 pub fn get_capture_status(state: State<'_, AppState>) -> CaptureStatus {
     state.capture.status()
+}
+
+#[tauri::command]
+pub fn get_flow_snapshot(state: State<'_, AppState>) -> FlowSnapshot {
+    state.capture.flow_snapshot()
 }
 
 #[tauri::command]
