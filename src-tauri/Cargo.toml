@@ -17,7 +17,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 etherparse = "0.20.3"
 libloading = "0.8"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 tauri = { version = "2", features = [] }
 thiserror = "2"
